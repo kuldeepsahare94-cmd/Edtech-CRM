@@ -7,12 +7,6 @@ services:
     rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
-    plan: starter          # free plan has NO persistent disk — SQLite data will be wiped on every
-                            # deploy/restart. Use at least the Starter plan if you want data to persist.
-    disk:
-      name: crm-data
-      mountPath: /opt/render/project/src/backend
-      sizeGB: 1
     envVars:
       - key: JWT_SECRET
         generateValue: true
