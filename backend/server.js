@@ -29,5 +29,6 @@ app.use('/api/users', requireAuth, require('./routes/users'));
 app.use('/api/settings', requireAuth, require('./routes/settings'));
 app.use('/api/assistant', requireAuth, require('./routes/assistant'));
 app.use('/api/dev', requireAuth, require('./routes/dev'));
+
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log(`Placement CRM API running on port ${PORT}`));
