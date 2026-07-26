@@ -1,0 +1,24 @@
+# Render Blueprint — lets Render auto-configure the backend from this repo.
+# In the Render dashboard: New -> Blueprint -> connect this repo -> it reads this file.
+services:
+  - type: web
+    name: eduplace-crm-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    plan: starter          # free plan has NO persistent disk — SQLite data will be wiped on every
+                            # deploy/restart. Use at least the Starter plan if you want data to persist.
+    disk:
+      name: crm-data
+      mountPath: /opt/render/project/src/backend
+      sizeGB: 1
+    envVars:
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ANTHROPIC_API_KEY
+        sync: false          # set manually in the Render dashboard — don't commit real keys
+      - key: ASSISTANT_MODEL
+        value: claude-sonnet-5
+      - key: FRONTEND_URL
+        sync: false          # set to your Vercel URL after the frontend is deployed
