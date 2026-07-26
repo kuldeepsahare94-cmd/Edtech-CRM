@@ -3,7 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
-const { requireAuth, JWT_SECRET } = require('../middleware/auth');
+const { requireAuth, loadPermissions, JWT_SECRET } = require('../middleware/auth');
 
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
@@ -20,7 +20,14 @@ router.post('/login', (req, res) => {
   const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
   res.json({
     token,
-    user: { id: user.id, username: user.username, full_name: user.full_name, role: role || null },
+    user: {
+      id: user.id,
+      username: user.username,
+      full_name: user.full_name,
+      role,
+      role_name: role ? role.name : null,
+      permissions: loadPermissions(user.role_id),
+    },
   });
 });
 
