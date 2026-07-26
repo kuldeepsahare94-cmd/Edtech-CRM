@@ -264,12 +264,70 @@ CREATE TABLE IF NOT EXISTS ai_action_log (
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_ai_action_log_user ON ai_action_log(user_id);
+
+-- ============================================================================
+-- WhatsApp Business Integration (Phase 1: providers + templates)
+-- ============================================================================
+
+-- One row per connected WhatsApp Business Account. Credentials are encrypted
+-- at rest (see services/whatsapp/crypto.js) — never stored or returned in plaintext.
+CREATE TABLE IF NOT EXISTS whatsapp_providers (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,                  -- display name, e.g. "Main Business Number"
+  provider_type TEXT NOT NULL,         -- meta_cloud | gupshup | wati | aisensy | interakt
+  credentials_encrypted TEXT NOT NULL, -- JSON blob, AES-256-GCM encrypted
+  webhook_url TEXT,
+  webhook_secret_encrypted TEXT,
+  is_default INTEGER DEFAULT 0,
+  status TEXT DEFAULT 'Not Tested',    -- Not Tested | Connected | Failed
+  last_test_at TEXT,
+  last_test_result TEXT,
+  last_sync_at TEXT,
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS whatsapp_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider_id INTEGER NOT NULL,
+  template_name TEXT NOT NULL,
+  language TEXT DEFAULT 'en',
+  status TEXT,                         -- APPROVED | PENDING | REJECTED (as reported by provider)
+  category TEXT,                       -- MARKETING | UTILITY | AUTHENTICATION
+  header_text TEXT,
+  body_text TEXT,
+  footer_text TEXT,
+  variables_json TEXT DEFAULT '[]',    -- ["1","2",...] or named vars, detected from body/header
+  buttons_json TEXT DEFAULT '[]',
+  media_type TEXT,                     -- none | image | video | document
+  raw_json TEXT,                       -- full provider payload, for debugging/future fields
+  synced_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (provider_id) REFERENCES whatsapp_providers(id) ON DELETE CASCADE,
+  UNIQUE(provider_id, template_name, language)
+);
+CREATE INDEX IF NOT EXISTS idx_wa_templates_provider ON whatsapp_templates(provider_id);
+CREATE INDEX IF NOT EXISTS idx_wa_templates_category ON whatsapp_templates(category);
+
+-- Every connect/test/sync/send/webhook action, for the required audit trail.
+CREATE TABLE IF NOT EXISTS whatsapp_audit_log (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  provider_id INTEGER,
+  action TEXT NOT NULL,                -- connect | test | sync_templates | send | webhook_received | error
+  detail TEXT,
+  status TEXT DEFAULT 'success',       -- success | error | denied
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL,
+  FOREIGN KEY (provider_id) REFERENCES whatsapp_providers(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wa_audit_provider ON whatsapp_audit_log(provider_id);
 `);
 
 // ===== Seed default roles & permission matrix =====
 const roleCount = db.prepare('SELECT COUNT(*) c FROM roles').get().c;
 if (roleCount === 0) {
-  const modules = ['leads', 'students', 'courses', 'admissions', 'payments', 'companies', 'placements', 'reports', 'users', 'settings', 'assistant'];
+  const modules = ['leads', 'students', 'courses', 'admissions', 'payments', 'companies', 'placements', 'reports', 'users', 'settings', 'assistant', 'whatsapp'];
   const insertRole = db.prepare('INSERT INTO roles (name, is_system) VALUES (?,1)');
   const insertPerm = db.prepare(`INSERT INTO role_permissions (role_id, module, can_view, can_create, can_edit, can_delete, can_export) VALUES (?,?,?,?,?,?,?)`);
 
@@ -282,25 +340,25 @@ if (roleCount === 0) {
       leads: [1, 1, 1, 0, 1], students: [1, 1, 1, 0, 0], courses: [1, 0, 0, 0, 0],
       admissions: [1, 1, 1, 0, 0], payments: [1, 0, 0, 0, 0], companies: [0, 0, 0, 0, 0],
       placements: [0, 0, 0, 0, 0], reports: [1, 0, 0, 0, 1], users: [0, 0, 0, 0, 0], settings: [0, 0, 0, 0, 0],
-      assistant: [1, 1, 0, 0, 0],
+      assistant: [1, 1, 0, 0, 0], whatsapp: [0, 0, 0, 0, 0],
     },
     'Accountant': {
       leads: [0, 0, 0, 0, 0], students: [1, 0, 0, 0, 0], courses: [1, 0, 0, 0, 0],
       admissions: [1, 0, 0, 0, 0], payments: [1, 1, 1, 0, 1], companies: [0, 0, 0, 0, 0],
       placements: [0, 0, 0, 0, 0], reports: [1, 0, 0, 0, 1], users: [0, 0, 0, 0, 0], settings: [0, 0, 0, 0, 0],
-      assistant: [1, 1, 0, 0, 0],
+      assistant: [1, 1, 0, 0, 0], whatsapp: [0, 0, 0, 0, 0],
     },
     'Placement Officer': {
       leads: [0, 0, 0, 0, 0], students: [1, 0, 0, 0, 0], courses: [1, 0, 0, 0, 0],
       admissions: [1, 0, 0, 0, 0], payments: [0, 0, 0, 0, 0], companies: [1, 1, 1, 0, 1],
       placements: [1, 1, 1, 0, 1], reports: [1, 0, 0, 0, 1], users: [0, 0, 0, 0, 0], settings: [0, 0, 0, 0, 0],
-      assistant: [1, 1, 0, 0, 0],
+      assistant: [1, 1, 0, 0, 0], whatsapp: [1, 0, 0, 0, 0],
     },
     'Trainer': {
       leads: [0, 0, 0, 0, 0], students: [1, 0, 0, 0, 0], courses: [1, 0, 0, 0, 0],
       admissions: [1, 0, 0, 0, 0], payments: [0, 0, 0, 0, 0], companies: [0, 0, 0, 0, 0],
       placements: [1, 0, 0, 0, 0], reports: [0, 0, 0, 0, 0], users: [0, 0, 0, 0, 0], settings: [0, 0, 0, 0, 0],
-      assistant: [1, 0, 0, 0, 0],
+      assistant: [1, 0, 0, 0, 0], whatsapp: [0, 0, 0, 0, 0],
     },
   };
 
