@@ -1,0 +1,146 @@
+// In local dev, Vite proxies /api to localhost:4000 (see vite.config.js).
+// In production, set VITE_API_BASE_URL to your backend URL.
+const API_ROOT = import.meta.env.VITE_API_BASE_URL || '';
+const BASE = `${API_ROOT}/api`;
+
+async function req(method, path, body) {
+  const token = localStorage.getItem('cd_token');
+  const headers = {};
+  if (body) headers['Content-Type'] = 'application/json';
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(BASE + path, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  if (res.status === 401) {
+    localStorage.removeItem('cd_token');
+    localStorage.removeItem('cd_user');
+    if (!window.location.pathname.startsWith('/login')) {
+      window.location.href = '/login';
+    }
+    throw new Error('Session expired, please log in again');
+  }
+
+  if (res.status === 204) return null;
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new Error(data?.error || res.statusText);
+  return data;
+}
+
+const qs = (params) => {
+  const clean = Object.fromEntries(Object.entries(params || {}).filter(([, v]) => v !== undefined && v !== null && v !== ''));
+  const q = new URLSearchParams(clean).toString();
+  return q ? `?${q}` : '';
+};
+
+export const api = {
+  // auth
+  login: (username, password) => req('POST', '/auth/login', { username, password }),
+  me: () => req('GET', '/auth/me'),
+
+  // leads
+  listLeads: (params) => req('GET', '/leads' + qs(params)),
+  getLead: (id) => req('GET', `/leads/${id}`),
+  createLead: (body) => req('POST', '/leads', body),
+  updateLead: (id, body) => req('PUT', `/leads/${id}`, body),
+  deleteLead: (id) => req('DELETE', `/leads/${id}`),
+  addLeadActivity: (id, body) => req('POST', `/leads/${id}/activities`, body),
+  convertLead: (id) => req('POST', `/leads/${id}/convert`),
+
+  // students
+  listStudents: (params) => req('GET', '/students' + qs(params)),
+  getStudent: (id) => req('GET', `/students/${id}`),
+  createStudent: (body) => req('POST', '/students', body),
+  updateStudent: (id, body) => req('PUT', `/students/${id}`, body),
+  deleteStudent: (id) => req('DELETE', `/students/${id}`),
+
+  // courses
+  listCourses: (params) => req('GET', '/courses' + qs(params)),
+  getCourse: (id) => req('GET', `/courses/${id}`),
+  createCourse: (body) => req('POST', '/courses', body),
+  updateCourse: (id, body) => req('PUT', `/courses/${id}`, body),
+  deleteCourse: (id) => req('DELETE', `/courses/${id}`),
+  courseTenureOptions: () => req('GET', '/courses/tenure-options'),
+
+  // admissions
+  listAdmissions: (params) => req('GET', '/admissions' + qs(params)),
+  getAdmission: (id) => req('GET', `/admissions/${id}`),
+  createAdmission: (body) => req('POST', '/admissions', body),
+  updateAdmission: (id, body) => req('PUT', `/admissions/${id}`, body),
+  deleteAdmission: (id) => req('DELETE', `/admissions/${id}`),
+  nextInstallment: (id) => req('POST', `/admissions/${id}/next-installment`),
+
+  // payments
+  listPayments: (params) => req('GET', '/payments' + qs(params)),
+  getPayment: (id) => req('GET', `/payments/${id}`),
+  updatePayment: (id, body) => req('PUT', `/payments/${id}`, body),
+  deletePayment: (id) => req('DELETE', `/payments/${id}`),
+  receiptUrl: (id, institute) => `${BASE}/payments/${id}/receipt?institute=${institute}`,
+
+  // companies
+  listCompanies: (params) => req('GET', '/companies' + qs(params)),
+  getCompany: (id) => req('GET', `/companies/${id}`),
+  createCompany: (body) => req('POST', '/companies', body),
+  updateCompany: (id, body) => req('PUT', `/companies/${id}`, body),
+  deleteCompany: (id) => req('DELETE', `/companies/${id}`),
+
+  // placements
+  listPlacements: (params) => req('GET', '/placements' + qs(params)),
+  getPlacement: (id) => req('GET', `/placements/${id}`),
+  createPlacement: (body) => req('POST', '/placements', body),
+  updatePlacement: (id, body) => req('PUT', `/placements/${id}`, body),
+  deletePlacement: (id) => req('DELETE', `/placements/${id}`),
+
+  // dashboard
+  dashboard: () => req('GET', '/dashboard'),
+
+  // reports
+  reportLeads: (params) => req('GET', '/reports/leads' + qs(params)),
+  reportStudents: (params) => req('GET', '/reports/students' + qs(params)),
+  reportAdmissions: (params) => req('GET', '/reports/admissions' + qs(params)),
+  reportCourseWiseAdmissions: () => req('GET', '/reports/course-wise-admissions'),
+  reportFeeCollection: (params) => req('GET', '/reports/fee-collection' + qs(params)),
+  reportPendingFees: () => req('GET', '/reports/pending-fees'),
+  reportPayments: (params) => req('GET', '/reports/payments' + qs(params)),
+  reportPlacements: (params) => req('GET', '/reports/placements' + qs(params)),
+  reportInterviews: (params) => req('GET', '/reports/interviews' + qs(params)),
+  reportCompanies: () => req('GET', '/reports/companies'),
+  reportRevenue: (params) => req('GET', '/reports/revenue' + qs(params)),
+  reportMonthlyAdmissions: () => req('GET', '/reports/monthly-admissions'),
+  reportMonthlyCollection: () => req('GET', '/reports/monthly-collection'),
+
+  // notifications
+  listNotifications: () => req('GET', '/notifications'),
+  markNotificationRead: (key) => req('POST', `/notifications/${key}/read`),
+  markAllNotificationsRead: () => req('POST', '/notifications/read-all'),
+
+  // roles & users
+  listRoles: () => req('GET', '/roles'),
+  createRole: (body) => req('POST', '/roles', body),
+  updateRolePermissions: (id, permissions) => req('PUT', `/roles/${id}/permissions`, { permissions }),
+  deleteRole: (id) => req('DELETE', `/roles/${id}`),
+
+  listUsers: () => req('GET', '/users'),
+  createUser: (body) => req('POST', '/users', body),
+  updateUser: (id, body) => req('PUT', `/users/${id}`, body),
+  deleteUser: (id) => req('DELETE', `/users/${id}`),
+
+  // settings
+  listReceiptTemplates: () => req('GET', '/settings/receipt-templates'),
+  updateReceiptTemplate: (id, body) => req('PUT', `/settings/receipt-templates/${id}`, body),
+  listMasterOptions: (listType) => req('GET', `/settings/master-options${listType ? `?list_type=${listType}` : ''}`),
+  createMasterOption: (body) => req('POST', '/settings/master-options', body),
+  updateMasterOption: (id, body) => req('PUT', `/settings/master-options/${id}`, body),
+  deleteMasterOption: (id) => req('DELETE', `/settings/master-options/${id}`),
+
+  // AI assistant
+  listConversations: () => req('GET', '/assistant/conversations'),
+  createConversation: () => req('POST', '/assistant/conversations', {}),
+  getConversation: (id) => req('GET', `/assistant/conversations/${id}`),
+  sendAssistantMessage: (id, message) => req('POST', `/assistant/conversations/${id}/message`, { message }),
+  confirmAssistantAction: (id, approve) => req('POST', `/assistant/conversations/${id}/confirm`, { approve }),
+  assistantAuditLog: () => req('GET', '/assistant/audit-log'),
+};
