@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { api } from '../api';
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,17 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('cd_user');
     setToken(null);
     setUser(null);
+  }, []);
+
+  useEffect(() => {
+    if (!token) return;
+    api.me().then((res) => {
+      if (res?.user) {
+        localStorage.setItem('cd_user', JSON.stringify(res.user));
+        setUser(res.user);
+      }
+    }).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
