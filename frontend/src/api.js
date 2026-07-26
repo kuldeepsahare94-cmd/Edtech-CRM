@@ -143,4 +143,7 @@ export const api = {
   sendAssistantMessage: (id, message) => req('POST', `/assistant/conversations/${id}/message`, { message }),
   confirmAssistantAction: (id, approve) => req('POST', `/assistant/conversations/${id}/confirm`, { approve }),
   assistantAuditLog: () => req('GET', '/assistant/audit-log'),
+
+  // dev
+  seedDemoData: () => req('POST', '/dev/seed-demo-data'),
 };
