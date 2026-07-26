@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Settings as SettingsIcon, Plus, Trash2, Sparkles } from 'lucide-react';
+import { Settings as SettingsIcon, Plus, Trash2, Sparkles, Database } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 
@@ -135,8 +135,24 @@ function AiAuditLog() {
 export default function Settings() {
   const can = usePermissions();
   const [templates, setTemplates] = useState([]);
+  const [seeding, setSeeding] = useState(false);
+  const [seedResult, setSeedResult] = useState(null);
   const load = () => api.listReceiptTemplates().then(setTemplates);
   useEffect(() => { load(); }, []);
+
+  const seedDemoData = async () => {
+    if (!confirm('This will add sample leads, students, courses, admissions, payments, companies, and placements. Continue?')) return;
+    setSeeding(true);
+    setSeedResult(null);
+    try {
+      const res = await api.seedDemoData();
+      setSeedResult(res);
+    } catch (err) {
+      alert('Could not load demo data: ' + err.message);
+    } finally {
+      setSeeding(false);
+    }
+  };
 
   return (
     <div className="p-8 max-w-5xl">
@@ -149,6 +165,31 @@ export default function Settings() {
           <p className="text-sm text-slate-500 mt-1">Receipt templates and master option lists.</p>
         </div>
       </div>
+
+      {can('settings', 'edit') && (
+        <div className="bg-white border border-line rounded-xl p-5 mt-8 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+              <Database className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-sm font-semibold text-ink">Load Demo Data</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Adds sample leads, courses, students, admissions, payments, companies &amp; placements so every module has something to view.
+                {seedResult && (
+                  <span className="block text-good mt-1">
+                    Added: {Object.entries(seedResult.counts).map(([k, v]) => `${v} ${k}`).join(', ')}.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+          <button onClick={seedDemoData} disabled={seeding}
+            className="bg-ink text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-ink-light disabled:opacity-60 shrink-0">
+            {seeding ? 'Loading…' : 'Load Demo Data'}
+          </button>
+        </div>
+      )}
 
       <h2 className="text-sm font-semibold text-ink mt-8 mb-3">Receipt Templates</h2>
       <p className="text-xs text-slate-400 mb-4">
