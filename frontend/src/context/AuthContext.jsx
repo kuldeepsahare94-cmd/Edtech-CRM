@@ -24,6 +24,8 @@ export function AuthProvider({ children }) {
     setUser(null);
   }, []);
 
+  // Re-hydrate permissions from the server on every page load — covers the case
+  // where an admin changed this user's role/permissions in a previous session.
   useEffect(() => {
     if (!token) return;
     api.me().then((res) => {

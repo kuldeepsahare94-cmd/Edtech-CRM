@@ -21,6 +21,8 @@ import Roles from './pages/Roles';
 import Users from './pages/Users';
 import Settings from './pages/Settings';
 import Appearance from './pages/Appearance';
+import WhatsAppIntegrations from './pages/WhatsAppIntegrations';
+import WhatsAppTemplates from './pages/WhatsAppTemplates';
 
 export default function App() {
   return (
@@ -48,6 +50,8 @@ export default function App() {
               <Route path="/users" element={<Users />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/appearance" element={<Appearance />} />
+              <Route path="/whatsapp" element={<WhatsAppIntegrations />} />
+              <Route path="/whatsapp/templates" element={<WhatsAppTemplates />} />
             </Route>
           </Routes>
         </BrowserRouter>

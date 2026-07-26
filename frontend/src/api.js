@@ -146,4 +146,16 @@ export const api = {
 
   // dev
   seedDemoData: () => req('POST', '/dev/seed-demo-data'),
+
+  // WhatsApp integrations
+  waProviderTypes: () => req('GET', '/whatsapp/provider-types'),
+  waListProviders: () => req('GET', '/whatsapp/providers'),
+  waConnectProvider: (body) => req('POST', '/whatsapp/providers', body),
+  waUpdateProvider: (id, body) => req('PUT', `/whatsapp/providers/${id}`, body),
+  waDeleteProvider: (id) => req('DELETE', `/whatsapp/providers/${id}`),
+  waSetDefaultProvider: (id) => req('POST', `/whatsapp/providers/${id}/set-default`),
+  waTestProvider: (id) => req('POST', `/whatsapp/providers/${id}/test`),
+  waSyncTemplates: (id) => req('POST', `/whatsapp/providers/${id}/sync-templates`),
+  waListTemplates: (params) => req('GET', '/whatsapp/templates' + qs(params)),
+  waAuditLog: () => req('GET', '/whatsapp/audit-log'),
 };

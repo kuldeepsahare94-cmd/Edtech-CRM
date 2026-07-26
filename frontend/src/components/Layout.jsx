@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Users as UsersIcon, GraduationCap, BookOpen, ClipboardList, Wallet, Building2, Briefcase, BarChart3, Settings as SettingsIcon, LogOut, UserCog, ShieldCheck, Palette, Menu, X } from 'lucide-react';
+import { LayoutDashboard, Users as UsersIcon, GraduationCap, BookOpen, ClipboardList, Wallet, Building2, Briefcase, BarChart3, Settings as SettingsIcon, LogOut, UserCog, ShieldCheck, Palette, Menu, X, MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import GlobalSearch from './GlobalSearch';
 import NotificationBell from './NotificationBell';
@@ -18,6 +18,7 @@ const links = [
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/roles', label: 'Roles & Permissions', icon: ShieldCheck },
   { to: '/users', label: 'Users', icon: UserCog },
+  { to: '/whatsapp', label: 'WhatsApp', icon: MessageCircle },
   { to: '/settings', label: 'Settings', icon: SettingsIcon },
   { to: '/appearance', label: 'Appearance', icon: Palette },
 ];
