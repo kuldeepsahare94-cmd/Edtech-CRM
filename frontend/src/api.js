@@ -158,4 +158,36 @@ export const api = {
   waSyncTemplates: (id) => req('POST', `/whatsapp/providers/${id}/sync-templates`),
   waListTemplates: (params) => req('GET', '/whatsapp/templates' + qs(params)),
   waAuditLog: () => req('GET', '/whatsapp/audit-log'),
+
+  // WhatsApp workflows
+  waListEvents: () => req('GET', '/whatsapp/events'),
+  waListWorkflows: () => req('GET', '/whatsapp/workflows'),
+  waCreateWorkflow: (body) => req('POST', '/whatsapp/workflows', body),
+  waUpdateWorkflow: (id, body) => req('PUT', `/whatsapp/workflows/${id}`, body),
+  waActivateWorkflow: (id) => req('POST', `/whatsapp/workflows/${id}/activate`),
+  waDeactivateWorkflow: (id) => req('POST', `/whatsapp/workflows/${id}/deactivate`),
+  waDeleteWorkflow: (id) => req('DELETE', `/whatsapp/workflows/${id}`),
+  waWorkflowRuns: (id) => req('GET', `/whatsapp/workflows/${id}/runs`),
+  waRunScheduledChecks: () => req('POST', '/whatsapp/workflows/run-scheduled-checks'),
+
+  // WhatsApp campaigns
+  waPreviewRecipients: (body) => req('POST', '/whatsapp/campaigns/preview-recipients', body),
+  waListCampaigns: () => req('GET', '/whatsapp/campaigns'),
+  waCreateCampaign: (body) => req('POST', '/whatsapp/campaigns', body),
+  waGetCampaign: (id) => req('GET', `/whatsapp/campaigns/${id}`),
+  waDeleteCampaign: (id) => req('DELETE', `/whatsapp/campaigns/${id}`),
+  waSendCampaign: (id, body) => req('POST', `/whatsapp/campaigns/${id}/send`, body || {}),
+  waListOptouts: () => req('GET', '/whatsapp/optouts'),
+  waAddOptout: (body) => req('POST', '/whatsapp/optouts', body),
+  waRemoveOptout: (id) => req('DELETE', `/whatsapp/optouts/${id}`),
+
+  // WhatsApp conversations
+  waListConversations: (params) => req('GET', '/whatsapp/conversations' + qs(params)),
+  waGetConversation: (id) => req('GET', `/whatsapp/conversations/${id}`),
+  waMarkConversationRead: (id) => req('POST', `/whatsapp/conversations/${id}/read`),
+  waReplyConversation: (id, text) => req('POST', `/whatsapp/conversations/${id}/reply`, { text }),
+
+  // WhatsApp analytics
+  waAnalytics: (params) => req('GET', '/whatsapp/analytics' + qs(params)),
+  waAnalyticsCampaignOptions: () => req('GET', '/whatsapp/analytics/campaign-options'),
 };

@@ -30,6 +30,12 @@ const STYLES = {
   Selected: 'bg-emerald-100 text-good',
   Rejected: 'bg-red-50 text-warn',
   Waiting: 'bg-amber-soft text-amber',
+  // WhatsApp campaigns / workflows
+  draft: 'bg-slate-100 text-slate-500',
+  scheduled: 'bg-sky-50 text-sky-700',
+  sending: 'bg-amber-soft text-amber',
+  completed: 'bg-emerald-100 text-good',
+  failed: 'bg-red-50 text-warn',
 };
 
 export default function StatusBadge({ status }) {

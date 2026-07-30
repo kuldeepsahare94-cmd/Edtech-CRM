@@ -23,6 +23,10 @@ import Settings from './pages/Settings';
 import Appearance from './pages/Appearance';
 import WhatsAppIntegrations from './pages/WhatsAppIntegrations';
 import WhatsAppTemplates from './pages/WhatsAppTemplates';
+import WhatsAppWorkflows from './pages/WhatsAppWorkflows';
+import WhatsAppCampaigns from './pages/WhatsAppCampaigns';
+import WhatsAppInbox from './pages/WhatsAppInbox';
+import WhatsAppAnalytics from './pages/WhatsAppAnalytics';
 
 export default function App() {
   return (
@@ -52,6 +56,11 @@ export default function App() {
               <Route path="/appearance" element={<Appearance />} />
               <Route path="/whatsapp" element={<WhatsAppIntegrations />} />
               <Route path="/whatsapp/templates" element={<WhatsAppTemplates />} />
+              <Route path="/whatsapp/workflows" element={<WhatsAppWorkflows />} />
+              <Route path="/whatsapp/campaigns" element={<WhatsAppCampaigns />} />
+              <Route path="/whatsapp/inbox" element={<WhatsAppInbox />} />
+              <Route path="/whatsapp/inbox/:id" element={<WhatsAppInbox />} />
+              <Route path="/whatsapp/analytics" element={<WhatsAppAnalytics />} />
             </Route>
           </Routes>
         </BrowserRouter>
