@@ -20,6 +20,12 @@
  *   Send one templated message. Must throw with a clear message on failure —
  *   callers (workflows/campaigns) are responsible for retry/backoff policy.
  *
+ * @property {(credentials: object, reply: {to: string, text: string}) => Promise<{ok: boolean, providerMessageId: string, raw: any}>} sendText
+ *   Send a freeform text reply inside an open conversation (WhatsApp's
+ *   "customer service window" — providers only allow this within ~24h of the
+ *   customer's last inbound message; outside that window a template is
+ *   required instead, which is what sendMessage is for).
+ *
  * @property {(payload: any, headers: object, webhookSecret: string) => {valid: boolean, events: Array<NormalizedWebhookEvent>}} parseWebhook
  *   Verify the webhook signature using webhookSecret, then normalize the
  *   payload into a flat list of events this app understands.

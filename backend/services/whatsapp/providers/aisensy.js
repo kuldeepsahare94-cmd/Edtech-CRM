@@ -39,6 +39,10 @@ async function sendMessage(credentials, message) {
   return { ok: true, providerMessageId: data.id || data.submitted_message_id, raw: data };
 }
 
+async function sendText() {
+  throw new Error('AiSensy does not expose a public freeform session-message API — only template sends via the campaign API. Reply to customers from the AiSensy dashboard directly, or configure a template for quick replies.');
+}
+
 function parseWebhook(payload) {
   // AiSensy webhook shape varies by integration setup on their dashboard;
   // this covers the common "engagement" webhook fields.
@@ -57,4 +61,4 @@ function verifySignature(rawBody, headers, secret) {
   return headers['x-webhook-secret'] === secret;
 }
 
-module.exports = { testConnection, fetchTemplates, sendMessage, parseWebhook, verifySignature };
+module.exports = { testConnection, fetchTemplates, sendMessage, sendText, parseWebhook, verifySignature };

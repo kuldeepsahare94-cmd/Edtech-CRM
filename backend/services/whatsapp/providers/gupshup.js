@@ -66,6 +66,22 @@ async function sendMessage(credentials, message) {
   return { ok: true, providerMessageId: data.messageId, raw: data };
 }
 
+async function sendText(credentials, reply) {
+  const { api_key, app_name, source_number } = credentials;
+  const body = new URLSearchParams({
+    channel: 'whatsapp', source: source_number, destination: reply.to, 'src.name': app_name,
+    message: JSON.stringify({ type: 'text', text: reply.text }),
+  });
+  const res = await fetch(`${BASE}/wa/api/v1/msg`, {
+    method: 'POST',
+    headers: { apikey: api_key, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || `Gupshup API returned ${res.status}`);
+  return { ok: true, providerMessageId: data.messageId, raw: data };
+}
+
 function parseWebhook(payload) {
   const events = [];
   const type = payload.type;
@@ -85,4 +101,4 @@ function verifySignature(rawBody, headers, secret) {
   return headers['x-webhook-secret'] === secret;
 }
 
-module.exports = { testConnection, fetchTemplates, sendMessage, parseWebhook, verifySignature };
+module.exports = { testConnection, fetchTemplates, sendMessage, sendText, parseWebhook, verifySignature };

@@ -61,6 +61,17 @@ function buildNotifications() {
     }
   }
 
+  // WhatsApp: unread inbound messages
+  const unreadConvos = db.prepare(`SELECT id, phone_number, entity_name, last_message_preview, last_message_at FROM whatsapp_conversations WHERE unread_count > 0`).all();
+  for (const c of unreadConvos) {
+    const key = `whatsapp-unread-${c.id}-${c.last_message_at}`;
+    items.push({
+      key, type: 'whatsapp_message', title: 'New WhatsApp Message',
+      message: `${c.entity_name || c.phone_number}: ${c.last_message_preview || ''}`,
+      link: `/whatsapp/inbox/${c.id}`, date: c.last_message_at, read: isRead(key),
+    });
+  }
+
   items.sort((a, b) => new Date(b.date) - new Date(a.date));
   return items;
 }

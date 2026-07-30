@@ -29,7 +29,7 @@ router.get('/providers', requirePermission('whatsapp', 'view'), (req, res) => {
 });
 
 router.post('/providers', requirePermission('whatsapp', 'create'), (req, res) => {
-  const { name, provider_type, credentials, webhook_url, webhook_secret } = req.body;
+  const { name, provider_type, credentials, webhook_url, webhook_secret } = req.body || {};
   if (!name || !provider_type || !credentials) return res.status(400).json({ error: 'name, provider_type, and credentials are required' });
   try {
     getAdapter(provider_type); // throws if unknown type
@@ -54,7 +54,7 @@ router.post('/providers', requirePermission('whatsapp', 'create'), (req, res) =>
 router.put('/providers/:id', requirePermission('whatsapp', 'edit'), (req, res) => {
   const existing = db.prepare('SELECT * FROM whatsapp_providers WHERE id=?').get(req.params.id);
   if (!existing) return res.status(404).json({ error: 'Not found' });
-  const { name, credentials, webhook_url, webhook_secret } = req.body;
+  const { name, credentials, webhook_url, webhook_secret } = req.body || {};
   const credentials_encrypted = credentials ? encrypt(credentials) : existing.credentials_encrypted;
   const webhook_secret_encrypted = webhook_secret ? encrypt(webhook_secret) : existing.webhook_secret_encrypted;
   db.prepare(`

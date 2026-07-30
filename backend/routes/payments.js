@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../db');
 const { requirePermission } = require('../middleware/auth');
 const { generateReceiptPdf } = require('../services/receiptPdf');
+const { fireEvent } = require('../services/whatsapp/workflowEngine');
 
 router.get('/', requirePermission('payments', 'view'), (req, res) => {
   const { status, student_id, admission_id, q } = req.query;
@@ -40,7 +41,16 @@ router.put('/:id', requirePermission('payments', 'edit'), (req, res) => {
     m.payment_date || (m.status === 'Paid' ? new Date().toISOString() : existing.payment_date),
     m.amount, m.payment_mode, m.transaction_number, m.status, m.remarks, req.params.id
   );
-  res.json(db.prepare('SELECT * FROM payments WHERE id=?').get(req.params.id));
+  const updated = db.prepare('SELECT * FROM payments WHERE id=?').get(req.params.id);
+  if (m.status === 'Paid' && existing.status !== 'Paid') {
+    const student = db.prepare('SELECT * FROM students WHERE id=?').get(updated.student_id);
+    const course = db.prepare('SELECT * FROM courses WHERE id=?').get(updated.course_id);
+    fireEvent('payment_received', {
+      entityType: 'payment', entityId: updated.id, mobile: student?.mobile,
+      fields: { student_name: student?.student_name, amount: updated.amount, payment_number: updated.payment_number, installment_number: updated.installment_number, course_name: course?.course_name },
+    });
+  }
+  res.json(updated);
 });
 
 router.delete('/:id', requirePermission('payments', 'delete'), (req, res) => {

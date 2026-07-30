@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requirePermission } = require('../middleware/auth');
+const { fireEvent } = require('../services/whatsapp/workflowEngine');
 
 router.get('/', requirePermission('placements', 'view'), (req, res) => {
   const { status, result, company_id, student_id, q } = req.query;
@@ -39,7 +40,14 @@ router.post('/', requirePermission('placements', 'create'), (req, res) => {
     b.interview_round || null, b.interview_status || 'Scheduled', b.result || null, b.package || null,
     b.joining_date || null, b.remarks || null
   );
-  res.status(201).json(db.prepare('SELECT * FROM placements WHERE id=?').get(info.lastInsertRowid));
+  const placement = db.prepare('SELECT * FROM placements WHERE id=?').get(info.lastInsertRowid);
+  const student = db.prepare('SELECT * FROM students WHERE id=?').get(b.student_id);
+  const company = db.prepare('SELECT * FROM companies WHERE id=?').get(b.company_id);
+  fireEvent('workshop_registration', {
+    entityType: 'placement', entityId: placement.id, mobile: student?.mobile,
+    fields: { student_name: student?.student_name, company_name: company?.company_name, interview_date: placement.interview_date, interview_round: placement.interview_round },
+  });
+  res.status(201).json(placement);
 });
 
 // Update Interview Status -> Update Result -> Placement Statistics auto-reflect (dashboard reads live)

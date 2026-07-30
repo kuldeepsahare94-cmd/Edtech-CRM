@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requirePermission } = require('../middleware/auth');
+const { fireEvent } = require('../services/whatsapp/workflowEngine');
 
 const admissionNumber = (id) => `ADM-${String(id).padStart(5, '0')}`;
 const paymentNumber = (id) => `PAY-${String(id).padStart(5, '0')}`;
@@ -66,7 +67,12 @@ router.post('/', requirePermission('admissions', 'create'), (req, res) => {
   });
 
   const admissionId = tx();
-  res.status(201).json(db.prepare('SELECT * FROM admissions WHERE id=?').get(admissionId));
+  const admission = db.prepare('SELECT * FROM admissions WHERE id=?').get(admissionId);
+  fireEvent('admission_confirmed', {
+    entityType: 'admission', entityId: admissionId, mobile: student.mobile,
+    fields: { student_name: student.student_name, course_name: course.course_name, admission_number: admission.admission_number, admission_date: admission.admission_date, total_course_fees: admission.total_course_fees, course_tenure: admission.course_tenure },
+  });
+  res.status(201).json(admission);
 });
 
 router.put('/:id', requirePermission('admissions', 'edit'), (req, res) => {

@@ -76,6 +76,18 @@ async function sendMessage(credentials, message) {
   return { ok: true, providerMessageId: data.messages?.[0]?.id, raw: data };
 }
 
+async function sendText(credentials, reply) {
+  const { access_token, phone_number_id } = credentials;
+  const res = await fetch(`${BASE}/${phone_number_id}/messages`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${access_token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ messaging_product: 'whatsapp', to: reply.to, type: 'text', text: { body: reply.text } }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.error?.message || `Meta API returned ${res.status}`);
+  return { ok: true, providerMessageId: data.messages?.[0]?.id, raw: data };
+}
+
 function parseWebhook(payload) {
   const events = [];
   for (const entry of payload.entry || []) {
@@ -103,4 +115,4 @@ function verifySignature(rawBody, headers, appSecret) {
   }
 }
 
-module.exports = { testConnection, fetchTemplates, sendMessage, parseWebhook, verifySignature };
+module.exports = { testConnection, fetchTemplates, sendMessage, sendText, parseWebhook, verifySignature };

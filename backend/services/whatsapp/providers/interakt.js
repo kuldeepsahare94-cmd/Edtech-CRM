@@ -40,6 +40,18 @@ async function sendMessage(credentials, message) {
   return { ok: true, providerMessageId: data.id, raw: data };
 }
 
+async function sendText(credentials, reply) {
+  const { api_key } = credentials;
+  const res = await fetch(`${BASE}/message/`, {
+    method: 'POST',
+    headers: { Authorization: authHeader(api_key), 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phoneNumber: reply.to, type: 'Text', text: { body: reply.text } }),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || `Interakt API returned ${res.status}`);
+  return { ok: true, providerMessageId: data.id, raw: data };
+}
+
 function parseWebhook(payload) {
   const events = [];
   const type = payload.type;
@@ -56,4 +68,4 @@ function verifySignature(rawBody, headers, secret) {
   return headers['x-webhook-secret'] === secret;
 }
 
-module.exports = { testConnection, fetchTemplates, sendMessage, parseWebhook, verifySignature };
+module.exports = { testConnection, fetchTemplates, sendMessage, sendText, parseWebhook, verifySignature };

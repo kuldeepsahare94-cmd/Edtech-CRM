@@ -406,4 +406,152 @@ if (receiptCount === 0) {
   insertReceipt.run('B', '[Institute B Name — configure in Settings]', '', '[Institute B Address]', '[Institute B Footer / Terms]', '[Institute B GSTIN]');
 }
 
+// ===== WhatsApp Workflow Automation (Phase 2) =====
+db.exec(`
+CREATE TABLE IF NOT EXISTS whatsapp_workflows (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  event_type TEXT NOT NULL,
+  provider_id INTEGER NOT NULL,
+  template_id INTEGER NOT NULL,
+  mappings_json TEXT DEFAULT '{}',     -- {"1": "student_name", "2": "assigned_counselor"}
+  send_mode TEXT DEFAULT 'immediate',  -- immediate | scheduled
+  schedule_delay_minutes INTEGER DEFAULT 0,
+  overdue_days INTEGER DEFAULT 7,      -- only used by payment_overdue
+  active INTEGER DEFAULT 0,            -- workflows start inactive until mappings are validated
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  updated_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (provider_id) REFERENCES whatsapp_providers(id) ON DELETE CASCADE,
+  FOREIGN KEY (template_id) REFERENCES whatsapp_templates(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wa_workflows_event ON whatsapp_workflows(event_type);
+
+-- One row per attempted send. For realtime events (status changes, payments, etc.)
+-- repeat rows are expected and correct — a lead can change status twice and should
+-- notify twice. Duplicate-prevention for the four *scheduled* events (follow-up
+-- missed, payment overdue, birthday, workshop reminder) is enforced separately by
+-- an anti-join in the scheduled-check query itself (routes/whatsappWorkflows.js) —
+-- "has this workflow already messaged this exact entity, ever" — not by a DB
+-- constraint here, since that would also wrongly block legitimate realtime repeats.
+CREATE TABLE IF NOT EXISTS whatsapp_workflow_runs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  workflow_id INTEGER NOT NULL,
+  event_type TEXT NOT NULL,
+  entity_type TEXT NOT NULL,          -- lead | student | admission | payment | placement
+  entity_id INTEGER NOT NULL,
+  phone_number TEXT,
+  status TEXT DEFAULT 'sent',         -- sent | failed | skipped
+  provider_message_id TEXT,
+  error TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (workflow_id) REFERENCES whatsapp_workflows(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_wa_workflow_runs_workflow ON whatsapp_workflow_runs(workflow_id);
+CREATE INDEX IF NOT EXISTS idx_wa_workflow_runs_entity ON whatsapp_workflow_runs(entity_type, entity_id);
+`);
+
+// ===== WhatsApp Bulk Campaigns (Phase 3) =====
+db.exec(`
+CREATE TABLE IF NOT EXISTS whatsapp_campaigns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  recipient_source TEXT NOT NULL,      -- leads | students | custom
+  filters_json TEXT DEFAULT '{}',
+  provider_id INTEGER NOT NULL,
+  template_id INTEGER NOT NULL,
+  mappings_json TEXT DEFAULT '{}',
+  send_mode TEXT DEFAULT 'immediate',  -- immediate | scheduled
+  scheduled_at TEXT,
+  rate_limit_delay_ms INTEGER DEFAULT 1000,  -- pause between sends, to respect provider rate limits
+  status TEXT DEFAULT 'draft',         -- draft | scheduled | sending | completed | failed
+  created_by INTEGER,
+  created_at TEXT DEFAULT (datetime('now')),
+  started_at TEXT,
+  completed_at TEXT,
+  FOREIGN KEY (provider_id) REFERENCES whatsapp_providers(id) ON DELETE CASCADE,
+  FOREIGN KEY (template_id) REFERENCES whatsapp_templates(id) ON DELETE CASCADE,
+  FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+);
+
+-- Resolved at campaign-creation time (not send time) so "Preview Personalised
+-- Messages" shows the exact recipient list and exact rendered text before anyone commits to sending.
+CREATE TABLE IF NOT EXISTS whatsapp_campaign_recipients (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  campaign_id INTEGER NOT NULL,
+  entity_type TEXT,                   -- lead | student | custom
+  entity_id INTEGER,
+  name TEXT,
+  mobile TEXT NOT NULL,
+  variables_json TEXT DEFAULT '{}',
+  status TEXT DEFAULT 'pending',       -- pending | sent | delivered | read | failed | opted_out
+  provider_message_id TEXT,
+  error TEXT,
+  sent_at TEXT,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (campaign_id) REFERENCES whatsapp_campaigns(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_wa_campaign_recipients_campaign ON whatsapp_campaign_recipients(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_wa_campaign_recipients_status ON whatsapp_campaign_recipients(status);
+
+-- CRM-wide opt-out list, keyed by phone number — checked before EVERY send
+-- (campaigns and workflows alike), not just per-campaign.
+CREATE TABLE IF NOT EXISTS whatsapp_optouts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  phone_number TEXT NOT NULL UNIQUE,
+  reason TEXT,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+`);
+
+// ===== Conversation Management (Phase 4) =====
+db.exec(`
+CREATE TABLE IF NOT EXISTS whatsapp_conversations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  provider_id INTEGER NOT NULL,
+  phone_number TEXT NOT NULL,
+  entity_type TEXT,                  -- lead | student | null (no CRM match found yet)
+  entity_id INTEGER,
+  entity_name TEXT,                  -- denormalized for fast list rendering even if the lead/student is later deleted
+  assigned_to TEXT,                  -- counselor name, copied from the matched lead/student at match time
+  last_message_at TEXT,
+  last_message_preview TEXT,
+  unread_count INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (provider_id) REFERENCES whatsapp_providers(id) ON DELETE CASCADE,
+  UNIQUE(provider_id, phone_number)
+);
+CREATE INDEX IF NOT EXISTS idx_wa_conversations_entity ON whatsapp_conversations(entity_type, entity_id);
+
+CREATE TABLE IF NOT EXISTS whatsapp_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL,
+  direction TEXT NOT NULL,           -- inbound | outbound
+  body TEXT,
+  media_type TEXT,
+  provider_message_id TEXT,
+  status TEXT DEFAULT 'received',    -- received | sent | delivered | read | failed
+  sent_by INTEGER,                   -- user id, for outbound replies sent from the CRM
+  created_at TEXT DEFAULT (datetime('now')),
+  FOREIGN KEY (conversation_id) REFERENCES whatsapp_conversations(id) ON DELETE CASCADE,
+  FOREIGN KEY (sent_by) REFERENCES users(id) ON DELETE SET NULL
+);
+CREATE INDEX IF NOT EXISTS idx_wa_messages_conversation ON whatsapp_messages(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_wa_messages_provider_msg_id ON whatsapp_messages(provider_message_id);
+`);
+
+// ===== Safe migration: add delivery-tracking columns to existing tables =====
+// This CRM is already live, so we can't just redefine these tables — CREATE
+// TABLE IF NOT EXISTS won't add columns to a table that already exists. This
+// checks first and is a no-op if the columns are already there.
+function ensureColumn(table, column, ddl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+}
+ensureColumn('whatsapp_campaign_recipients', 'delivered_at', 'delivered_at TEXT');
+ensureColumn('whatsapp_campaign_recipients', 'read_at', 'read_at TEXT');
+ensureColumn('whatsapp_workflow_runs', 'delivered_at', 'delivered_at TEXT');
+ensureColumn('whatsapp_workflow_runs', 'read_at', 'read_at TEXT');
+
 module.exports = db;

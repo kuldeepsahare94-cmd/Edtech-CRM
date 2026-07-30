@@ -61,6 +61,15 @@ async function sendMessage(credentials, message) {
   return { ok: true, providerMessageId: data.messageId || data.id, raw: data };
 }
 
+async function sendText(credentials, reply) {
+  const { api_endpoint, access_token } = credentials;
+  const url = `${api_endpoint.replace(/\/$/, '')}/api/v1/sendSessionMessage/${encodeURIComponent(reply.to)}?messageText=${encodeURIComponent(reply.text)}`;
+  const res = await fetch(url, { method: 'POST', headers: { Authorization: `Bearer ${access_token}` } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.result === false) throw new Error(data?.info || `WATI API returned ${res.status}`);
+  return { ok: true, providerMessageId: data.messageId || data.id, raw: data };
+}
+
 function parseWebhook(payload) {
   const events = [];
   const eventType = (payload.eventType || '').toLowerCase();
@@ -78,4 +87,4 @@ function verifySignature(rawBody, headers, secret) {
   return headers['x-webhook-secret'] === secret;
 }
 
-module.exports = { testConnection, fetchTemplates, sendMessage, parseWebhook, verifySignature };
+module.exports = { testConnection, fetchTemplates, sendMessage, sendText, parseWebhook, verifySignature };

@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const { requirePermission } = require('../middleware/auth');
+const { fireEvent } = require('../services/whatsapp/workflowEngine');
+const { computeLeadScore } = require('../services/leadScore');
 
 router.get('/', requirePermission('leads', 'view'), (req, res) => {
   const { status, source, counselor, q } = req.query;
@@ -21,7 +23,8 @@ router.get('/:id', requirePermission('leads', 'view'), (req, res) => {
     LEFT JOIN courses c ON c.id = l.interested_course_id WHERE l.id=?`).get(req.params.id);
   if (!lead) return res.status(404).json({ error: 'Not found' });
   const activities = db.prepare('SELECT * FROM lead_activities WHERE lead_id=? ORDER BY created_at DESC').all(req.params.id);
-  res.json({ ...lead, activities });
+  const { score, label } = computeLeadScore(lead, activities.length);
+  res.json({ ...lead, activities, lead_score: score, lead_score_label: label });
 });
 
 router.post('/', requirePermission('leads', 'create'), (req, res) => {
@@ -36,7 +39,12 @@ router.post('/', requirePermission('leads', 'create'), (req, res) => {
     b.date_of_birth || null, b.address || null, b.city || null, b.qualification || null, b.source || null,
     b.interested_course_id || null, b.status || 'New', b.follow_up_date || null, b.assigned_counselor || null, b.remarks || null
   );
-  res.status(201).json(db.prepare('SELECT * FROM leads WHERE id=?').get(info.lastInsertRowid));
+  const lead = db.prepare('SELECT * FROM leads WHERE id=?').get(info.lastInsertRowid);
+  const leadFields = { student_name: lead.student_name, mobile: lead.mobile, source: lead.source, city: lead.city, assigned_counselor: lead.assigned_counselor, status: lead.status, follow_up_date: lead.follow_up_date };
+  fireEvent('lead_created', { entityType: 'lead', entityId: lead.id, mobile: lead.mobile, fields: leadFields });
+  if (lead.assigned_counselor) fireEvent('lead_assigned', { entityType: 'lead', entityId: lead.id, mobile: lead.mobile, fields: leadFields });
+  if (lead.follow_up_date) fireEvent('follow_up_scheduled', { entityType: 'lead', entityId: lead.id, mobile: lead.mobile, fields: leadFields });
+  res.status(201).json(lead);
 });
 
 router.put('/:id', requirePermission('leads', 'edit'), (req, res) => {
@@ -56,7 +64,16 @@ router.put('/:id', requirePermission('leads', 'edit'), (req, res) => {
     db.prepare('INSERT INTO lead_activities (lead_id, type, note) VALUES (?,?,?)')
       .run(req.params.id, 'status_change', `${existing.status} → ${req.body.status}`);
   }
-  res.json(db.prepare('SELECT * FROM leads WHERE id=?').get(req.params.id));
+  if (req.body.follow_up_date && req.body.follow_up_date !== existing.follow_up_date) {
+    db.prepare('INSERT INTO lead_activities (lead_id, type, note) VALUES (?,?,?)')
+      .run(req.params.id, 'schedule', `Follow-up scheduled for ${req.body.follow_up_date}`);
+  }
+  const updated = db.prepare('SELECT * FROM leads WHERE id=?').get(req.params.id);
+  const leadFields = { student_name: updated.student_name, mobile: updated.mobile, source: updated.source, city: updated.city, assigned_counselor: updated.assigned_counselor, status: updated.status, follow_up_date: updated.follow_up_date };
+  if (req.body.status && req.body.status !== existing.status) fireEvent('lead_status_changed', { entityType: 'lead', entityId: updated.id, mobile: updated.mobile, fields: leadFields });
+  if (req.body.assigned_counselor && req.body.assigned_counselor !== existing.assigned_counselor) fireEvent('lead_assigned', { entityType: 'lead', entityId: updated.id, mobile: updated.mobile, fields: leadFields });
+  if (req.body.follow_up_date && req.body.follow_up_date !== existing.follow_up_date) fireEvent('follow_up_scheduled', { entityType: 'lead', entityId: updated.id, mobile: updated.mobile, fields: leadFields });
+  res.json(updated);
 });
 
 router.delete('/:id', requirePermission('leads', 'delete'), (req, res) => {
@@ -93,7 +110,9 @@ router.post('/:id/convert', requirePermission('leads', 'edit'), (req, res) => {
     return studentId;
   });
   const studentId = tx();
-  res.status(201).json({ student_id: studentId, student: db.prepare('SELECT * FROM students WHERE id=?').get(studentId) });
+  const student = db.prepare('SELECT * FROM students WHERE id=?').get(studentId);
+  fireEvent('welcome_message', { entityType: 'student', entityId: studentId, mobile: student.mobile, fields: { student_name: student.student_name, mobile: student.mobile, email: student.email } });
+  res.status(201).json({ student_id: studentId, student });
 });
 
 module.exports = router;
