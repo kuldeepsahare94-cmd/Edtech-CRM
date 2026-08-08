@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { BookOpen } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 import StatusBadge from '../components/StatusBadge';
@@ -33,13 +34,18 @@ export default function Courses() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Courses</h1>
-          <p className="text-sm text-slate-500 mt-1">Master source for fees, tenure &amp; EMI count used by Admissions.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Courses</h1>
+            <p className="text-sm text-slate-500 mt-1">Master source for fees, tenure &amp; EMI count used by Admissions.</p>
+          </div>
         </div>
         {can('courses', 'create') && (
           <button onClick={() => { setForm(empty); setEditingId(null); setShowForm((s) => !s); }}
-            className="bg-ink text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-ink-light">
+            className="bg-violet-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-violet-700">
             {showForm ? 'Cancel' : '+ Add course'}
           </button>
         )}
@@ -71,7 +77,7 @@ export default function Courses() {
         </form>
       )}
 
-      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto">
+      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 bg-canvas border-b border-line">
@@ -85,7 +91,7 @@ export default function Courses() {
           </thead>
           <tbody>
             {list.map((c) => (
-              <tr key={c.id} className="border-b border-line/60 hover:bg-canvas/60">
+              <tr key={c.id} className="border-b border-line/60 hover:bg-violet-50/40 transition-colors">
                 <td className="py-3 px-4">
                   <div className="text-ink font-medium">{c.course_name}</div>
                   {c.course_code && <div className="text-xs text-slate-400">{c.course_code}</div>}

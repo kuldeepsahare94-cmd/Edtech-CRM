@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Building2 } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 import { downloadCSV } from '../utils/csv';
@@ -24,16 +25,21 @@ export default function Companies() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Companies</h1>
-          <p className="text-sm text-slate-500 mt-1">Recruiters you place students with.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+            <Building2 className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Companies</h1>
+            <p className="text-sm text-slate-500 mt-1">Recruiters you place students with.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           {can('companies', 'export') && (
             <button onClick={() => downloadCSV('companies.csv', list)} className="border border-line text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">Export CSV</button>
           )}
           {can('companies', 'create') && (
-            <button onClick={() => setShowForm((s) => !s)} className="bg-ink text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-ink-light">
+            <button onClick={() => setShowForm((s) => !s)} className="bg-blue-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-blue-700">
               {showForm ? 'Cancel' : '+ Add company'}
             </button>
           )}
@@ -64,7 +70,7 @@ export default function Companies() {
         </form>
       )}
 
-      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto">
+      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 bg-canvas border-b border-line">
@@ -76,7 +82,7 @@ export default function Companies() {
           </thead>
           <tbody>
             {list.map((c) => (
-              <tr key={c.id} className="border-b border-line/60 hover:bg-canvas/60">
+              <tr key={c.id} className="border-b border-line/60 hover:bg-blue-50/40 transition-colors">
                 <td className="py-3 px-4"><Link to={`/companies/${c.id}`} className="text-ink font-medium hover:text-amber">{c.company_name}</Link></td>
                 <td className="py-3 px-4 text-slate-500">{c.industry || '—'}</td>
                 <td className="py-3 px-4 text-slate-500">{c.hr_name} {c.hr_mobile ? `· ${c.hr_mobile}` : ''}</td>

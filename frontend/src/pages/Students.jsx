@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { GraduationCap } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 import StatusBadge from '../components/StatusBadge';
@@ -17,9 +18,14 @@ export default function Students() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Students</h1>
-          <p className="text-sm text-slate-500 mt-1">Converted from leads. Admit them into a course to start the fee cycle.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+            <GraduationCap className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Students</h1>
+            <p className="text-sm text-slate-500 mt-1">Converted from leads. Admit them into a course to start the fee cycle.</p>
+          </div>
         </div>
         {can('students', 'export') && (
           <button onClick={() => downloadCSV('students.csv', list)} className="border border-line text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">Export CSV</button>
@@ -29,7 +35,7 @@ export default function Students() {
       <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, mobile, email…"
         className="border border-line rounded-lg px-3 py-2 text-sm mt-5 w-full max-w-md" />
 
-      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto">
+      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 bg-canvas border-b border-line">
@@ -42,9 +48,9 @@ export default function Students() {
           </thead>
           <tbody>
             {list.map((s) => (
-              <tr key={s.id} className="border-b border-line/60 hover:bg-canvas/60">
+              <tr key={s.id} className="border-b border-line/60 hover:bg-indigo-50/40 transition-colors">
                 <td className="py-3 px-4">
-                  <Link to={`/students/${s.id}`} className="text-ink font-medium hover:text-amber">{s.student_name}</Link>
+                  <Link to={`/students/${s.id}`} className="text-ink font-medium hover:text-indigo-600">{s.student_name}</Link>
                 </td>
                 <td className="py-3 px-4 text-slate-500">{s.mobile}</td>
                 <td className="py-3 px-4 text-slate-500">{s.qualification || '—'}</td>

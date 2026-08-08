@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Download, X } from 'lucide-react';
+import { Download, X, Wallet } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 import StatusBadge from '../components/StatusBadge';
@@ -69,9 +69,14 @@ export default function Payments() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Payments</h1>
-          <p className="text-sm text-slate-500 mt-1">Installments auto-created from Admissions. Mark paid to unlock receipts.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-amber-soft text-amber flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Payments</h1>
+            <p className="text-sm text-slate-500 mt-1">Installments auto-created from Admissions. Mark paid to unlock receipts.</p>
+          </div>
         </div>
         {can('payments', 'export') && (
           <button onClick={() => downloadCSV('payments.csv', list)} className="border border-line text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">Export CSV</button>
@@ -83,7 +88,7 @@ export default function Payments() {
         {STATUSES.map((s) => <option key={s}>{s}</option>)}
       </select>
 
-      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto">
+      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 bg-canvas border-b border-line">
@@ -98,7 +103,7 @@ export default function Payments() {
           </thead>
           <tbody>
             {list.map((p) => (
-              <tr key={p.id} className="border-b border-line/60 hover:bg-canvas/60">
+              <tr key={p.id} className="border-b border-line/60 hover:bg-amber-soft/40 transition-colors">
                 <td className="py-3 px-4 text-ink font-medium">{p.payment_number}</td>
                 <td className="py-3 px-4 text-slate-600">{p.student_name}</td>
                 <td className="py-3 px-4 text-slate-500">{p.course_name}</td>

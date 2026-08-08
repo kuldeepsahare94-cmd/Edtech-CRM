@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ClipboardList } from 'lucide-react';
 import { api } from '../api';
 import { usePermissions } from '../context/usePermissions';
 import StatusBadge from '../components/StatusBadge';
@@ -38,16 +39,21 @@ export default function Admissions() {
   return (
     <div className="p-8 max-w-6xl">
       <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Admissions</h1>
-          <p className="text-sm text-slate-500 mt-1">Selecting a student + course auto-fills fees from the Course Master and creates the first pending payment.</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center shrink-0">
+            <ClipboardList className="w-5 h-5" />
+          </div>
+          <div>
+            <h1 className="font-display text-2xl font-semibold text-ink" style={{ fontFamily: 'var(--font-display)' }}>Admissions</h1>
+            <p className="text-sm text-slate-500 mt-1">Selecting a student + course auto-fills fees from the Course Master and creates the first pending payment.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           {can('admissions', 'export') && (
             <button onClick={() => downloadCSV('admissions.csv', list)} className="border border-line text-sm font-medium px-4 py-2 rounded-lg hover:bg-white">Export CSV</button>
           )}
           {can('admissions', 'create') && (
-            <button onClick={() => setShowForm((s) => !s)} className="bg-ink text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-ink-light">
+            <button onClick={() => setShowForm((s) => !s)} className="bg-teal-600 text-white text-sm font-medium px-4 py-2 rounded-lg hover:bg-teal-700">
               {showForm ? 'Cancel' : '+ New admission'}
             </button>
           )}
@@ -94,7 +100,7 @@ export default function Admissions() {
         </form>
       )}
 
-      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto">
+      <div className="bg-white border border-line rounded-xl mt-6 overflow-hidden overflow-x-auto shadow-sm">
         <table className="w-full text-sm">
           <thead>
             <tr className="text-left text-slate-500 bg-canvas border-b border-line">
@@ -107,7 +113,7 @@ export default function Admissions() {
           </thead>
           <tbody>
             {list.map((a) => (
-              <tr key={a.id} className="border-b border-line/60 hover:bg-canvas/60">
+              <tr key={a.id} className="border-b border-line/60 hover:bg-teal-50/40 transition-colors">
                 <td className="py-3 px-4"><Link to={`/admissions/${a.id}`} className="text-ink font-medium hover:text-amber">{a.admission_number}</Link></td>
                 <td className="py-3 px-4 text-slate-600">{a.student_name}</td>
                 <td className="py-3 px-4 text-slate-500">{a.course_name}</td>
